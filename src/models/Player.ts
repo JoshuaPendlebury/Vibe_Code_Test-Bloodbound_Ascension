@@ -1,6 +1,7 @@
 export interface SavedPlayer {
   level: number;
   experience: number;
+  deathXpPenaltyKills: number;
   health: number;
   maxHealth: number;
   attack: number;
@@ -79,6 +80,7 @@ export class Player {
     return {
       level: this.level,
       experience: this.experience,
+      deathXpPenaltyKills: this.deathXpPenaltyKills,
       health,
       maxHealth: this.maxHealth,
       attack: this.baseAttack,
@@ -96,6 +98,7 @@ export class Player {
   restore(data: Partial<SavedPlayer>): void {
     this.level = data.level ?? 1;
     this.experience = data.experience ?? 0;
+    this.deathXpPenaltyKills = data.deathXpPenaltyKills ?? 0;
     this.maxHealth = data.maxHealth ?? 100;
     this.baseAttack = data.attack ?? 12;
     this.baseDefense = data.defense ?? 7;
