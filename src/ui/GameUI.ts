@@ -119,6 +119,12 @@ export class GameUI {
       this.combat.setPaused(!this.combat.paused);
       this.render();
     });
+    document.querySelector("#active-abilities")?.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLElement>("[data-ability]");
+      if (!button || button.hasAttribute("disabled")) return;
+      const abilityId = button.dataset.ability;
+      if (abilityId) this.combat.useAbility(abilityId);
+    });
     document.querySelector("#save-button")?.addEventListener("click", () => this.save(true));
     document.querySelector("#reset-button")?.addEventListener("click", () => {
       if (confirm("Reset all Bloodbound: Ascension progress? This cannot be undone.")) {
@@ -195,13 +201,22 @@ export class GameUI {
     const container = document.querySelector("#active-abilities");
     if (!container) return;
     const active = abilities.filter((ability) => ability.type === "active" && this.player.acquiredAbilities.includes(ability.id));
-    container.innerHTML = active.map((ability) => {
+    const renderedIds = Array.from(container.querySelectorAll<HTMLElement>("[data-ability]"))
+      .map((button) => button.dataset.ability);
+    const activeIds = active.map((ability) => ability.id);
+    if (renderedIds.length !== activeIds.length || renderedIds.some((id, index) => id !== activeIds[index])) {
+      container.innerHTML = active.map((ability) =>
+        `<button class="active-ability" data-ability="${ability.id}"><span>${ability.icon}</span><div><strong>${ability.name}</strong><small>${ability.description}</small></div></button>`
+      ).join("");
+    }
+    for (const ability of active) {
+      const button = container.querySelector<HTMLButtonElement>(`[data-ability="${ability.id}"]`);
+      if (!button) continue;
       const remaining = Math.max(0, Math.ceil(((this.combat.cooldowns[ability.id] ?? 0) - Date.now()) / 1000));
-      return `<button class="active-ability" data-ability="${ability.id}" ${remaining ? "disabled" : ""}><span>${ability.icon}</span><div><strong>${ability.name}</strong><small>${remaining ? `${remaining}s cooldown` : ability.description}</small></div></button>`;
-    }).join("");
-    container.querySelectorAll("[data-ability]").forEach((button) => {
-      button.addEventListener("click", () => this.combat.useAbility((button as HTMLElement).dataset.ability ?? ""));
-    });
+      button.disabled = remaining > 0;
+      const detail = button.querySelector("small");
+      if (detail) detail.textContent = remaining ? `${remaining}s cooldown` : ability.description;
+    }
   }
 
   private updateCooldowns(): void {

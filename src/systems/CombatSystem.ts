@@ -146,6 +146,7 @@ export class CombatSystem {
     if (!ability || !this.player.acquiredAbilities.includes(id)) return false;
     if ((this.cooldowns[id] ?? 0) > Date.now()) return false;
     if (this.monster.health <= 0) return false;
+    if (this.resolved || this.recovering || this.playerHealth <= 0) return false;
 
     if (id === "blood-burst") {
       const damage = Math.max(1, Math.round(this.player.attack * (ability.effect.damageMultiplier ?? 1) - this.monster.defense * 0.4));
