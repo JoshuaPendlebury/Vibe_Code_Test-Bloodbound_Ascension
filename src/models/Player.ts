@@ -34,6 +34,7 @@ export class Player {
   unlockedLocations = ["graveyard"];
   selectedLocation = "graveyard";
   bossDefeated = false;
+  deathXpPenaltyKills = 0;
 
   get attack() {
     return this.baseAttack + this.upgrades.attack * 4 + this.level * 2;

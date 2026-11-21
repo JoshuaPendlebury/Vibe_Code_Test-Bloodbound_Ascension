@@ -9,6 +9,8 @@ export interface CombatCallbacks {
   onUpdate: () => void;
   onLog: (message: string, type?: "normal" | "damage" | "heal" | "victory" | "ability") => void;
   onAbsorb: (monsterName: string, abilityName: string, description: string) => void;
+  onDeath: (monsterName: string) => void;
+  onRecover: () => void;
   onSave: () => void;
 }
 
@@ -111,12 +113,17 @@ export class CombatSystem {
     let essenceMultiplier = 1 + (this.player.upgrades.absorption * 0.05);
     if (this.player.acquiredAbilities.includes("essence-conduit")) essenceMultiplier += 0.2;
     const essence = Math.max(1, Math.round(this.monster.bloodEssence * (stronger ? 1.25 : 1) * essenceMultiplier));
-    const experience = Math.round(this.monster.experience * (stronger ? 1.25 : 1));
+    let experience = Math.round(this.monster.experience * (stronger ? 1.25 : 1));
+    const hadDeathPenalty = this.player.deathXpPenaltyKills > 0;
+    if (hadDeathPenalty) {
+      experience = Math.max(1, Math.round(experience * 0.5));
+      this.player.deathXpPenaltyKills--;
+    }
     this.player.bloodEssence += essence;
     const levels = this.player.gainExperience(experience);
     if (this.monster.template.rank === "boss") this.player.bossDefeated = true;
     this.progression.unlockLocations(this.player);
-    this.callbacks.onLog(`Victory! +${experience} XP and +${essence} Blood Essence.`, "victory");
+    this.callbacks.onLog(`Victory! +${experience} XP and +${essence} Blood Essence.${hadDeathPenalty ? " Death XP penalty: 50%." : ""}`, "victory");
     for (const level of levels) this.callbacks.onLog(`Ascension: Level ${level} reached!`, "ability");
 
     const result = this.absorption.absorb(this.player, this.monster, this.playerPowerAtStart);
@@ -130,12 +137,17 @@ export class CombatSystem {
   private death(): void {
     if (this.recovering || this.resolved) return;
     this.recovering = true;
+    this.monster.health = this.monster.maxHealth;
+    this.player.deathXpPenaltyKills = 1;
     this.callbacks.onLog("Your vampire falls. Blood restores within seconds.", "damage");
+    this.callbacks.onDeath(this.monster.template.name);
+    this.callbacks.onUpdate();
     window.setTimeout(() => {
       this.playerHealth = this.player.maxHealthWithUpgrades;
       this.player.health = this.playerHealth;
       this.recovering = false;
       this.callbacks.onLog("Your body reforms. Combat resumes.", "heal");
+      this.callbacks.onRecover();
       this.callbacks.onUpdate();
       this.callbacks.onSave();
     }, 1800);
