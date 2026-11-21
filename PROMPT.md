@@ -20,7 +20,7 @@ Create a prompt for GitHub Copilot to create a Vampire Fantasy Idle Game using T
 
 ### Prompt 3
 
-[`INTIAL_PROMPT.md`](https://github.com/JoshuaPendlebury/Vibe_Code_Test-Bloodbound_Ascension/blob/main/INITIAL_PROMPT.md)
+[`INTIAL_PROMPT.md`](./INITIAL_PROMPT.md)
 
 ### Prompt 4
 
