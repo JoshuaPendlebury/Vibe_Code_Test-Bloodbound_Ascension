@@ -21,12 +21,7 @@ export class GameUI {
     SaveSystem.load(this.player);
     this.location = locations.find((item) => item.id === this.player.selectedLocation) ?? locations[0];
     const template = this.chooseMonster();
-    this.combat = new CombatSystem(this.player, template, this.location.tier, {
-      onUpdate: () => this.render(),
-      onLog: (message, type = "normal") => this.addLog(message, type),
-      onAbsorb: (monsterName, abilityName, description) => this.showAbsorption(monsterName, abilityName, description),
-      onSave: () => this.save(),
-    });
+    this.combat = new CombatSystem(this.player, template, this.location.tier, this.combatCallbacks());
   }
 
   start(): void {
@@ -48,18 +43,24 @@ export class GameUI {
     return list[Math.floor(Math.random() * list.length)] ?? monsters[0];
   }
 
+  private combatCallbacks() {
+    return {
+      onUpdate: () => this.render(),
+      onLog: (message: string, type: "normal" | "damage" | "heal" | "victory" | "ability" = "normal") => this.addLog(message, type),
+      onAbsorb: (monsterName: string, abilityName: string, description: string) => this.showAbsorption(monsterName, abilityName, description),
+      onDeath: (monsterName: string) => this.showDeath(monsterName),
+      onRecover: () => this.hideDeath(),
+      onSave: () => this.save(),
+    };
+  }
+
   private spawnMonster(): void {
     if (this.respawning) return;
     this.respawning = true;
     this.addLog("Blood stirs... a new enemy emerges.", "normal");
     window.setTimeout(() => {
       const template = this.chooseMonster();
-      this.combat = new CombatSystem(this.player, template, this.location.tier, {
-        onUpdate: () => this.render(),
-        onLog: (message, type = "normal") => this.addLog(message, type),
-        onAbsorb: (monsterName, abilityName, description) => this.showAbsorption(monsterName, abilityName, description),
-        onSave: () => this.save(),
-      });
+      this.combat = new CombatSystem(this.player, template, this.location.tier, this.combatCallbacks());
       this.combat.setPaused(false);
       this.combat.start();
       this.respawning = false;
@@ -111,6 +112,9 @@ export class GameUI {
       </main>
       <div id="absorption-modal" class="modal hidden" role="dialog" aria-modal="true">
         <div class="modal-card"><div class="modal-rune">♛</div><h2>Blood Absorption Successful</h2><p id="absorb-monster"></p><h3 id="absorb-name"></h3><p id="absorb-effect"></p><button id="close-modal">Seal Blood</button></div>
+      </div>
+      <div id="death-modal" class="modal death-modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card death-card"><div class="death-rune">†</div><h2>You Have Fallen</h2><p id="death-monster"></p><p class="death-penalty">The next kill grants 50% XP.</p><p class="death-recovery">Your body will reform in 1.8 seconds...</p></div>
       </div>`;
   }
 
@@ -171,6 +175,7 @@ export class GameUI {
     const playerStats = document.querySelector("#player-stats");
     if (playerStats) playerStats.innerHTML = `
       <div class="power-rating"><span>Power Rating</span><strong>${this.player.power}</strong></div>
+      ${this.player.deathXpPenaltyKills > 0 ? '<div class="death-penalty-status">Death Penalty: 50% XP on next kill</div>' : ""}
       <div class="stat-grid">
         <div><span>Attack</span><strong>${this.player.attack}</strong></div><div><span>Defense</span><strong>${this.player.defense}</strong></div>
         <div><span>Speed</span><strong>${this.player.speed}</strong></div><div><span>Level</span><strong>${this.player.level}</strong></div>
@@ -265,12 +270,7 @@ export class GameUI {
           this.player.selectedLocation = this.location.id;
           this.combat.stop();
           const template = this.chooseMonster();
-          this.combat = new CombatSystem(this.player, template, this.location.tier, {
-            onUpdate: () => this.render(),
-            onLog: (message, type = "normal") => this.addLog(message, type),
-            onAbsorb: (monsterName, abilityName, description) => this.showAbsorption(monsterName, abilityName, description),
-            onSave: () => this.save(),
-          });
+          this.combat = new CombatSystem(this.player, template, this.location.tier, this.combatCallbacks());
           this.combat.start();
           this.save();
           this.render();
@@ -301,6 +301,17 @@ export class GameUI {
     document.querySelector("#absorb-name")!.textContent = `New Ability Acquired: ${abilityName}`;
     document.querySelector("#absorb-effect")!.textContent = `Effect: ${description}`;
     modal.classList.remove("hidden");
+  }
+
+  private showDeath(monsterName: string): void {
+    const modal = document.querySelector("#death-modal");
+    if (!modal) return;
+    document.querySelector("#death-monster")!.textContent = `Slain by ${monsterName}`;
+    modal.classList.remove("hidden");
+  }
+
+  private hideDeath(): void {
+    document.querySelector("#death-modal")?.classList.add("hidden");
   }
 
   private save(manual = false): void {
