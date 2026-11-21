@@ -1,9 +1,14 @@
 # Development Prompt Log
 
-## Initial build
+## ChatGPT
+### Prompt 1
+Assignment_Text.md
+Summarize this and use it as context for this project
 
-Create a complete vanilla TypeScript and Vite idle vampire RPG named Bloodbound: Ascension. Implement modular player, monster, ability, combat, absorption, progression, location, save, and UI systems; a responsive gothic interface; LocalStorage persistence; and all core gameplay loops described in the project specification.
+### Prompt 2
+Create a prompt for GitHub Copilot to create a Vampire Fantasy Idle Game using TypeScript and HTML where you gain abilities by absorbing stronger monsters
 
-## Iteration notes
+## GitHub Copilot
 
-- [Add future AI prompts and decisions here.]
+### Prompt 3
+[INTIAL_PROMPT.md](https://github.com/JoshuaPendlebury/Vibe_Code_Test-Bloodbound_Ascension/blob/main/INITIAL_PROMPT.md)
