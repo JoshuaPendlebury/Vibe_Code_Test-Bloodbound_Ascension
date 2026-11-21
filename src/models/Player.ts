@@ -9,6 +9,9 @@ export interface SavedPlayer {
   speed: number;
   bloodEssence: number;
   acquiredAbilities: string[];
+  abilityLevels: Record<string, number>;
+  abilityProgress: Record<string, number>;
+  speciesDefeats: Record<string, number>;
   upgrades: Record<string, number>;
   unlockedLocations: string[];
   selectedLocation: string;
@@ -25,6 +28,9 @@ export class Player {
   baseSpeed = 10;
   bloodEssence = 0;
   acquiredAbilities: string[] = ["blood-burst", "vampiric-drain", "shadow-strike", "blood-shield"];
+  abilityLevels: Record<string, number> = {};
+  abilityProgress: Record<string, number> = {};
+  speciesDefeats: Record<string, number> = {};
   upgrades: Record<string, number> = {
     attack: 0,
     health: 0,
@@ -60,6 +66,14 @@ export class Player {
     return Math.floor(30 * Math.pow(1.38, this.level - 1));
   }
 
+  getAbilityLevel(abilityId: string): number {
+    return this.acquiredAbilities.includes(abilityId) ? (this.abilityLevels[abilityId] ?? 1) : 0;
+  }
+
+  getSpeciesDefeats(speciesId: string): number {
+    return this.speciesDefeats[speciesId] ?? this.abilityProgress[speciesId] ?? 0;
+  }
+
   gainExperience(amount: number): number[] {
     this.experience += amount;
     const levels: number[] = [];
@@ -88,6 +102,9 @@ export class Player {
       speed: this.baseSpeed,
       bloodEssence: this.bloodEssence,
       acquiredAbilities: [...this.acquiredAbilities],
+      abilityLevels: { ...this.abilityLevels },
+      abilityProgress: { ...this.abilityProgress },
+      speciesDefeats: { ...this.speciesDefeats },
       upgrades: { ...this.upgrades },
       unlockedLocations: [...this.unlockedLocations],
       selectedLocation: this.selectedLocation,
@@ -105,6 +122,12 @@ export class Player {
     this.baseSpeed = data.speed ?? 10;
     this.bloodEssence = data.bloodEssence ?? 0;
     this.acquiredAbilities = Array.isArray(data.acquiredAbilities) ? data.acquiredAbilities : [];
+    this.abilityLevels = data.abilityLevels ?? {};
+    this.abilityProgress = data.abilityProgress ?? {};
+    this.speciesDefeats = data.speciesDefeats ?? {};
+    for (const id of this.acquiredAbilities) {
+      if (!this.abilityLevels[id]) this.abilityLevels[id] = 1;
+    }
     this.upgrades = { attack: 0, health: 0, defense: 0, attackSpeed: 0, absorption: 0, ...data.upgrades };
     this.unlockedLocations = Array.isArray(data.unlockedLocations) ? data.unlockedLocations : ["graveyard"];
     this.selectedLocation = this.unlockedLocations.includes(data.selectedLocation ?? "")

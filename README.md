@@ -12,6 +12,8 @@ This project was created for a college AI-assisted development assignment to dem
 - Experience, leveling, health recovery, and power ratings
 - Blood Essence economy and permanent upgrades
 - Stronger-monster Blood Absorption mechanic
+- Ability evolution by defeating 1, 3, and 6 powerful monsters of the same species
+- Visual ability levels, evolution progress bars, and evolution notifications
 - Passive and active abilities with real combat effects
 - Graveyard, forest, and castle locations
 - Elite monsters and bosses
@@ -62,6 +64,7 @@ npm run preview
 ## Future improvements
 
 - Additional locations and monster families
+- Additional evolution tiers for passive and active abilities
 - Character portraits and expanded animation effects
 - More active abilities and equipment
 - Offline idle rewards

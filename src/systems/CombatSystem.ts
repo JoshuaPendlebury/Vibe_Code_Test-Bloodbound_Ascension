@@ -1,6 +1,7 @@
 import type { Player } from "../models/Player";
 import { Monster } from "../models/Monster";
 import type { MonsterTemplate } from "../models/Monster";
+import type { AbilityEffect } from "../models/Ability";
 import { abilities } from "../data/abilities";
 import { AbsorptionSystem } from "./AbsorptionSystem";
 import { ProgressionSystem } from "./ProgressionSystem";
@@ -8,7 +9,7 @@ import { ProgressionSystem } from "./ProgressionSystem";
 export interface CombatCallbacks {
   onUpdate: () => void;
   onLog: (message: string, type?: "normal" | "damage" | "heal" | "victory" | "ability") => void;
-  onAbsorb: (monsterName: string, abilityName: string, description: string) => void;
+  onAbsorb: (monsterName: string, abilityName: string, description: string, resultType?: "acquired" | "evolved", level?: number) => void;
   onDeath: (monsterName: string) => void;
   onRecover: () => void;
   onSave: () => void;
@@ -56,9 +57,31 @@ export class CombatSystem {
     return this.player.acquiredAbilities.includes(id);
   }
 
+  private abilityLevel(id: string): number {
+    return this.player.getAbilityLevel(id);
+  }
+
+  private scaledPassiveEffect(id: string): AbilityEffect {
+    const base = abilities.find((ability) => ability.id === id)?.effect ?? {};
+    const level = this.abilityLevel(id);
+    return {
+      ...base,
+      criticalChance: base.criticalChance ? base.criticalChance * level : undefined,
+      dodgeChance: base.dodgeChance ? base.dodgeChance * level : undefined,
+      defense: base.defense ? base.defense * level : undefined,
+      healPercent: base.healPercent ? base.healPercent * level : undefined,
+      attackSpeed: base.attackSpeed ? base.attackSpeed * level : undefined,
+      attack: base.attack ? base.attack * level : undefined,
+      essenceBonus: base.essenceBonus ? base.essenceBonus * level : undefined,
+    };
+  }
+
   private effectivePlayerInterval(): number {
     let interval = this.player.attackInterval;
-    if (this.hasPassive("blood-frenzy")) interval *= 0.85;
+    if (this.hasPassive("blood-frenzy")) {
+      const bonus = this.scaledPassiveEffect("blood-frenzy").attackSpeed ?? 15;
+      interval *= 1 - bonus / 100;
+    }
     return interval;
   }
 
@@ -74,16 +97,20 @@ export class CombatSystem {
 
   private playerAttack(active = false): void {
     if (this.resolved || this.recovering || this.monster.health <= 0 || this.playerHealth <= 0) return;
-    let critChance = 5 + (this.hasPassive("blood-scent") ? this.passiveEffect("blood-scent").criticalChance ?? 0 : 0);
+    let critChance = 5 + (this.hasPassive("blood-scent") ? this.scaledPassiveEffect("blood-scent").criticalChance ?? 0 : 0);
     const critical = active ? false : Math.random() * 100 < critChance;
     let damage = Math.max(1, Math.round(this.player.attack - this.monster.defense * 0.55));
-    if (this.hasPassive("demonic-strength")) damage = Math.round(damage * 1.25);
+    if (this.hasPassive("demonic-strength")) {
+      const bonus = this.scaledPassiveEffect("demonic-strength").attack ?? 25;
+      damage = Math.round(damage * (1 + bonus / 100));
+    }
     if (critical) damage = Math.round(damage * 1.65);
     if (active) damage = Math.round(damage);
 
     this.monster.health -= damage;
     if (this.hasPassive("life-drain")) {
-      const heal = Math.max(1, Math.round(damage * 0.08));
+      const healPercent = this.scaledPassiveEffect("life-drain").healPercent ?? 8;
+      const heal = Math.max(1, Math.round(damage * healPercent / 100));
       this.playerHealth = Math.min(this.player.maxHealthWithUpgrades, this.playerHealth + heal);
     }
     this.callbacks.onLog(critical ? `Critical strike! You dealt ${damage} damage.` : `You strike ${this.monster.template.name} for ${damage} damage.`, critical ? "damage" : "normal");
@@ -93,12 +120,13 @@ export class CombatSystem {
 
   private monsterAttack(): void {
     if (this.resolved || this.recovering || this.monster.health <= 0 || this.playerHealth <= 0) return;
-    const dodgeChance = this.hasPassive("shadow-step") ? this.passiveEffect("shadow-step").dodgeChance ?? 0 : 0;
+    const dodgeChance = this.hasPassive("shadow-step") ? this.scaledPassiveEffect("shadow-step").dodgeChance ?? 0 : 0;
     if (Math.random() * 100 < dodgeChance) {
       this.callbacks.onLog(`Shadow Step causes you to evade ${this.monster.template.name}'s attack.`, "heal");
       return;
     }
-    let damage = Math.max(1, Math.round(this.monster.attack - (this.player.defense + (this.hasPassive("bone-armor") ? 20 : 0)) * 0.58));
+    const boneArmor = this.hasPassive("bone-armor") ? this.scaledPassiveEffect("bone-armor").defense ?? 20 : 0;
+    let damage = Math.max(1, Math.round(this.monster.attack - (this.player.defense + boneArmor) * 0.58));
     if (Date.now() < this.shieldUntil) damage = Math.round(damage * 0.4);
     this.playerHealth = Math.max(0, this.playerHealth - damage);
     this.callbacks.onLog(`${this.monster.template.name} retaliates for ${damage} damage.`, "damage");
@@ -111,7 +139,9 @@ export class CombatSystem {
     this.stop();
     const stronger = this.monster.power > this.playerPowerAtStart;
     let essenceMultiplier = 1 + (this.player.upgrades.absorption * 0.05);
-    if (this.player.acquiredAbilities.includes("essence-conduit")) essenceMultiplier += 0.2;
+    if (this.player.acquiredAbilities.includes("essence-conduit")) {
+      essenceMultiplier += (this.scaledPassiveEffect("essence-conduit").essenceBonus ?? 20) / 100;
+    }
     const essence = Math.max(1, Math.round(this.monster.bloodEssence * (stronger ? 1.25 : 1) * essenceMultiplier));
     let experience = Math.round(this.monster.experience * (stronger ? 1.25 : 1));
     const levelDifference = Math.max(0, this.player.level - this.monster.level);
@@ -137,7 +167,10 @@ export class CombatSystem {
     const result = this.absorption.absorb(this.player, this.monster, this.playerPowerAtStart);
     if (result.acquired && result.abilityName && result.abilityDescription) {
       this.callbacks.onLog(`BLOOD ABSORPTION: ${result.abilityName} acquired!`, "ability");
-      this.callbacks.onAbsorb(this.monster.template.name, result.abilityName, result.abilityDescription);
+      this.callbacks.onAbsorb(this.monster.template.name, result.abilityName, result.abilityDescription, "acquired", result.level);
+    } else if (result.evolved && result.abilityName && result.abilityDescription) {
+      this.callbacks.onLog(`ABILITY EVOLVED: ${result.abilityName} reached Level ${result.level}!`, "ability");
+      this.callbacks.onAbsorb(this.monster.template.name, result.abilityName, result.abilityDescription, "evolved", result.level);
     }
     this.callbacks.onSave();
   }
@@ -168,18 +201,20 @@ export class CombatSystem {
     if (this.monster.health <= 0) return false;
     if (this.resolved || this.recovering || this.playerHealth <= 0) return false;
 
+    const activeLevel = this.abilityLevel(id);
+    const activeMultiplier = 1 + Math.max(0, activeLevel - 1) * 0.25;
     if (id === "blood-burst") {
-      const damage = Math.max(1, Math.round(this.player.attack * (ability.effect.damageMultiplier ?? 1) - this.monster.defense * 0.4));
+      const damage = Math.max(1, Math.round(this.player.attack * (ability.effect.damageMultiplier ?? 1) * activeMultiplier - this.monster.defense * 0.4));
       this.monster.health -= damage;
       this.callbacks.onLog(`Blood Burst erupts for ${damage} damage!`, "ability");
     } else if (id === "vampiric-drain") {
-      const damage = Math.max(1, Math.round(this.player.attack * (ability.effect.damageMultiplier ?? 1) - this.monster.defense * 0.4));
-      const heal = Math.round(damage * 0.35);
+      const damage = Math.max(1, Math.round(this.player.attack * (ability.effect.damageMultiplier ?? 1) * activeMultiplier - this.monster.defense * 0.4));
+      const heal = Math.round(damage * (0.35 + Math.max(0, activeLevel - 1) * 0.08));
       this.monster.health -= damage;
       this.playerHealth = Math.min(this.player.maxHealthWithUpgrades, this.playerHealth + heal);
       this.callbacks.onLog(`Vampiric Drain deals ${damage} damage and restores ${heal} health.`, "heal");
     } else if (id === "shadow-strike") {
-      const damage = Math.max(1, Math.round(this.player.attack * 2.2 - this.monster.defense * 0.3));
+      const damage = Math.max(1, Math.round(this.player.attack * 2.2 * activeMultiplier - this.monster.defense * 0.3));
       this.monster.health -= damage;
       this.callbacks.onLog(`Shadow Strike lands for ${damage} critical damage!`, "ability");
     } else if (id === "blood-shield") {

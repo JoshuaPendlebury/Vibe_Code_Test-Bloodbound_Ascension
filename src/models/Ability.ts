@@ -23,4 +23,6 @@ export interface Ability {
   cooldown: number;
   absorbable: boolean;
   icon: string;
+  maxLevel?: number;
+  evolutionRequirements?: number[];
 }
