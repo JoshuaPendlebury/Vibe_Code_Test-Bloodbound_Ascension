@@ -1,5 +1,6 @@
 import { abilities } from "../data/abilities";
 import { locations } from "../data/locations";
+import type { MonsterRank } from "./Monster";
 
 export interface SavedPlayer {
   level: number;
@@ -43,6 +44,7 @@ export class Player {
     defense: 0,
     attackSpeed: 0,
     absorption: 0,
+    abilityChance: 0,
   };
   unlockedLocations = ["graveyard"];
   selectedLocation = "graveyard";
@@ -73,6 +75,15 @@ export class Player {
   }
   get expNeeded() {
     return Math.floor(30 * Math.pow(1.38, this.level - 1));
+  }
+
+  getAbilityGainChance(rank: MonsterRank): number {
+    const rankCaps: Record<MonsterRank, number> = {
+      normal: 5,
+      elite: 10,
+      boss: 50,
+    };
+    return Math.min(this.upgrades.abilityChance * 1, rankCaps[rank]);
   }
 
   getAbilityLevel(abilityId: string): number {
@@ -140,7 +151,7 @@ export class Player {
     for (const id of this.acquiredAbilities) {
       if (!this.abilityLevels[id]) this.abilityLevels[id] = 1;
     }
-    this.upgrades = { attack: 0, health: 0, defense: 0, attackSpeed: 0, absorption: 0, ...data.upgrades };
+    this.upgrades = { attack: 0, health: 0, defense: 0, attackSpeed: 0, absorption: 0, abilityChance: 0, ...data.upgrades };
     const restoredBosses = Array.isArray(data.defeatedBosses) ? data.defeatedBosses : [];
     this.defeatedBosses = restoredBosses;
     this.unlockedLocations = locations

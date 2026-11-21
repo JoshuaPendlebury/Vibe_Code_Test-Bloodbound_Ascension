@@ -17,7 +17,9 @@ export interface AbsorptionResult {
 export class AbsorptionSystem {
   absorb(player: Player, monster: Monster, playerPowerAtStart: number): AbsorptionResult {
     const stronger = monster.power > playerPowerAtStart;
-    if (!stronger) return {
+    const chance = player.getAbilityGainChance(monster.template.rank);
+    const chanceSucceeded = !stronger && chance > 0 && Math.random() * 100 < chance;
+    if (!stronger && !chanceSucceeded) return {
       stronger: false,
       acquired: false,
       evolved: false,
