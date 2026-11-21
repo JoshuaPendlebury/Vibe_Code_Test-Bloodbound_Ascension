@@ -94,7 +94,13 @@ GitHub Copilot and Copilot Coding Agent were used to generate and refine the Typ
 
 ## Screenshots
 
-No screenshots are currently stored in the repository. Gameplay screenshots can be added to this section if required for submission.
+### Main interface
+
+![Bloodbound: Ascension main interface](./screenshots/Main_UI.png)
+
+### Ability acquisition
+
+![Bloodbound: Ascension ability acquisition screen](./screenshots/Obtain_Ability.png)
 
 ## Future improvements
 
