@@ -4,7 +4,7 @@
 
 ### Prompt 1
 
-`Assignment_Text.md`
+[`Assignment_Instructions.md`](./Assignment_Instructions.md)
 
 Summarize this and use it as context for this project
 
