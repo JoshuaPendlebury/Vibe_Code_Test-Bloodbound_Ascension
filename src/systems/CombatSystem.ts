@@ -31,13 +31,15 @@ export class CombatSystem {
   private recovering = false;
   private bossCycle = 0;
   private graveEnrageLogged = false;
+  private locationId: string;
 
-  constructor(player: Player, template: MonsterTemplate, tier: number, callbacks: CombatCallbacks) {
+  constructor(player: Player, template: MonsterTemplate, tier: number, callbacks: CombatCallbacks, locationId = "graveyard") {
     this.player = player;
     this.callbacks = callbacks;
     this.monster = new Monster(template, tier);
     this.playerHealth = player.health;
     this.playerPowerAtStart = player.power;
+    this.locationId = locationId;
   }
 
   start(): void {
@@ -204,6 +206,9 @@ export class CombatSystem {
       this.player.deathXpPenaltyKills--;
     }
     this.player.bloodEssence += essence;
+    if (this.monster.template.rank !== "boss") {
+      this.player.areaEnemyDefeats[this.locationId] = (this.player.areaEnemyDefeats[this.locationId] ?? 0) + 1;
+    }
     const levels = this.player.gainExperience(experience);
     if (this.monster.template.rank === "boss") {
       this.player.bossDefeated = true;
