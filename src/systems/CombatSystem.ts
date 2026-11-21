@@ -55,6 +55,15 @@ export class CombatSystem {
     this.paused = paused;
   }
 
+  skipEnemy(): void {
+    if (this.resolved) return;
+    this.resolved = true;
+    this.stop();
+    this.callbacks.onLog(`${this.monster.template.name} retreats. No reward gained.`, "normal");
+    this.callbacks.onUpdate();
+    this.callbacks.onSave();
+  }
+
   private hasPassive(id: string): boolean {
     return this.player.acquiredAbilities.includes(id);
   }

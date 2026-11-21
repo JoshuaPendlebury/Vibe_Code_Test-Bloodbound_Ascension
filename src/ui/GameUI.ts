@@ -92,6 +92,7 @@ export class GameUI {
           <div id="monster-area"></div>
           <div class="combat-controls">
             <button id="pause-button" class="primary-button">Ⅱ Pause Combat</button>
+            <button id="skip-button" class="icon-button">Skip Enemy</button>
             <button id="save-button" class="icon-button">Save</button>
             <button id="reset-button" class="icon-button danger">Reset</button>
           </div>
@@ -123,6 +124,11 @@ export class GameUI {
     document.querySelector("#pause-button")?.addEventListener("click", () => {
       this.combat.setPaused(!this.combat.paused);
       this.render();
+    });
+    document.querySelector("#skip-button")?.addEventListener("click", () => {
+      if (this.respawning) return;
+      this.combat.skipEnemy();
+      this.spawnMonster();
     });
     document.querySelector("#active-abilities")?.addEventListener("click", (event) => {
       const button = (event.target as HTMLElement).closest<HTMLElement>("[data-ability]");
