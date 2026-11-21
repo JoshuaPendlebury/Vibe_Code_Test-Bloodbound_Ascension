@@ -24,6 +24,8 @@ export class CombatSystem {
   private absorption = new AbsorptionSystem();
   private progression = new ProgressionSystem();
   private playerPowerAtStart: number;
+  private resolved = false;
+  private recovering = false;
 
   constructor(player: Player, template: MonsterTemplate, tier: number, callbacks: CombatCallbacks) {
     this.player = player;
@@ -63,15 +65,13 @@ export class CombatSystem {
   }
 
   private runCombatCycle(): void {
-    if (this.paused) return;
-    if (Date.now() < this.shieldUntil) {
-      // Shield is handled by incoming damage.
-    }
+    if (this.paused || this.resolved || this.recovering || this.monster.health <= 0 || this.playerHealth <= 0) return;
     this.playerAttack(false);
     if (this.monster.health > 0) this.monsterAttack();
   }
 
   private playerAttack(active = false): void {
+    if (this.resolved || this.recovering || this.monster.health <= 0 || this.playerHealth <= 0) return;
     let critChance = 5 + (this.hasPassive("blood-scent") ? this.passiveEffect("blood-scent").criticalChance ?? 0 : 0);
     const critical = active ? false : Math.random() * 100 < critChance;
     let damage = Math.max(1, Math.round(this.player.attack - this.monster.defense * 0.55));
@@ -90,6 +90,7 @@ export class CombatSystem {
   }
 
   private monsterAttack(): void {
+    if (this.resolved || this.recovering || this.monster.health <= 0 || this.playerHealth <= 0) return;
     const dodgeChance = this.hasPassive("shadow-step") ? this.passiveEffect("shadow-step").dodgeChance ?? 0 : 0;
     if (Math.random() * 100 < dodgeChance) {
       this.callbacks.onLog(`Shadow Step causes you to evade ${this.monster.template.name}'s attack.`, "heal");
@@ -103,6 +104,9 @@ export class CombatSystem {
   }
 
   private victory(): void {
+    if (this.resolved) return;
+    this.resolved = true;
+    this.stop();
     const stronger = this.monster.power > this.playerPowerAtStart;
     let essenceMultiplier = 1 + (this.player.upgrades.absorption * 0.05);
     if (this.player.acquiredAbilities.includes("essence-conduit")) essenceMultiplier += 0.2;
@@ -124,10 +128,13 @@ export class CombatSystem {
   }
 
   private death(): void {
+    if (this.recovering || this.resolved) return;
+    this.recovering = true;
     this.callbacks.onLog("Your vampire falls. Blood restores within seconds.", "damage");
     window.setTimeout(() => {
       this.playerHealth = this.player.maxHealthWithUpgrades;
       this.player.health = this.playerHealth;
+      this.recovering = false;
       this.callbacks.onLog("Your body reforms. Combat resumes.", "heal");
       this.callbacks.onUpdate();
       this.callbacks.onSave();
