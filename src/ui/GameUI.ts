@@ -47,7 +47,7 @@ export class GameUI {
     return {
       onUpdate: () => this.render(),
       onLog: (message: string, type: "normal" | "damage" | "heal" | "victory" | "ability" = "normal") => this.addLog(message, type),
-      onAbsorb: (monsterName: string, abilityName: string, description: string) => this.showAbsorption(monsterName, abilityName, description),
+      onAbsorb: (monsterName: string, abilityName: string, description: string, resultType: "acquired" | "evolved" = "acquired", level = 1) => this.showAbsorption(monsterName, abilityName, description, resultType, level),
       onDeath: (monsterName: string) => this.showDeath(monsterName),
       onRecover: () => this.hideDeath(),
       onSave: () => this.save(),
@@ -238,7 +238,7 @@ export class GameUI {
       const collection = abilities.filter((ability) => this.player.acquiredAbilities.includes(ability.id));
       content.innerHTML = `<div class="tab-title"><span>Ability Collection</span><strong>${collection.length}/${abilities.length}</strong></div>
         <div class="ability-list">${collection.map((ability) => `
-          <article class="ability-card ${ability.type}"><div class="ability-icon">${ability.icon}</div><div><div class="ability-name">${ability.name}<span>${ability.type}</span></div><p>${ability.description}</p>${ability.cooldown ? `<small>${ability.cooldown}s cooldown</small>` : ""}</div></article>`).join("")}</div>`;
+          ${this.renderAbilityCard(ability)}`).join("")}</div>`;
     } else if (this.tab === "upgrades") {
       content.innerHTML = `<div class="tab-title"><span>Permanent Upgrades</span></div><div class="upgrade-list">${upgradeData.map((upgrade) => {
         const rank = this.player.upgrades[upgrade.id];
@@ -282,6 +282,38 @@ export class GameUI {
     }
   }
 
+  private renderAbilityCard(ability: (typeof abilities)[number]): string {
+    const level = this.player.getAbilityLevel(ability.id);
+    const monster = monsters.find((item) => item.abilityId === ability.id);
+    const speciesId = monster?.speciesId ?? monster?.id;
+    const maxLevel = ability.maxLevel ?? 1;
+
+    if (!ability.absorbable) {
+      return `<article class="ability-card ${ability.type}">
+        <div class="ability-icon">${ability.icon}</div>
+        <div><div class="ability-name">${ability.name}<span>${ability.type}</span></div>
+        <p>${ability.description}</p><small>${ability.cooldown}s cooldown</small></div>
+      </article>`;
+    }
+
+    const count = speciesId ? this.player.getSpeciesDefeats(speciesId) : 0;
+    const requirements = ability.evolutionRequirements ?? [1, 3, 6];
+    const next = requirements.find((requirement) => requirement > count);
+    const progressTarget = level >= maxLevel ? count : (next ?? requirements[requirements.length - 1]);
+    const progressStart = level <= 1 ? 0 : (requirements[level - 2] ?? 0);
+    const progressPercent = level >= maxLevel ? 100 : Math.max(0, Math.min(100, (count - progressStart) / Math.max(1, progressTarget - progressStart) * 100));
+    const progressText = level >= maxLevel
+      ? "Maximum evolution reached"
+      : `${count}/${progressTarget} powerful ${monster?.name ?? "species"} defeats`;
+
+    return `<article class="ability-card ${ability.type} evolved">
+      <div class="ability-icon">${ability.icon}<b>Lv.${level}</b></div>
+      <div><div class="ability-name">${ability.name}<span>${ability.type} · Level ${level}</span></div>
+      <p>${ability.description}</p>
+      <div class="evolution-progress"><div><span>${level >= maxLevel ? "Evolution complete" : `Next evolution: Level ${level + 1}`}</span><strong>${progressText}</strong></div><div class="bar evolution"><div style="width:${progressPercent}%"></div></div></div></div>
+    </article>`;
+  }
+
   private renderLogs(): void {
     const log = document.querySelector("#combat-log");
     if (!log) return;
@@ -294,12 +326,15 @@ export class GameUI {
     this.renderLogs();
   }
 
-  private showAbsorption(monsterName: string, abilityName: string, description: string): void {
+  private showAbsorption(monsterName: string, abilityName: string, description: string, resultType: "acquired" | "evolved" = "acquired", level = 1): void {
     const modal = document.querySelector("#absorption-modal");
     if (!modal) return;
+    const heading = modal.querySelector("h2");
+    if (heading) heading.textContent = resultType === "evolved" ? "Ability Evolution Complete" : "Blood Absorption Successful";
     document.querySelector("#absorb-monster")!.textContent = `Monster Defeated: ${monsterName}`;
-    document.querySelector("#absorb-name")!.textContent = `New Ability Acquired: ${abilityName}`;
-    document.querySelector("#absorb-effect")!.textContent = `Effect: ${description}`;
+    document.querySelector("#absorb-name")!.textContent = resultType === "evolved" ? `${abilityName} evolved to Level ${level}` : `New Ability Acquired: ${abilityName}`;
+    document.querySelector("#absorb-effect")!.textContent = `Effect: ${description}${level > 1 ? ` · Evolution bonuses active at Level ${level}` : ""}`;
+    modal.querySelector(".modal-card")?.classList.toggle("evolution-card", resultType === "evolved");
     modal.classList.remove("hidden");
   }
 

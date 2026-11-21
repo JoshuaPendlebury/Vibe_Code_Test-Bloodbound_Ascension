@@ -2,6 +2,7 @@ export type MonsterRank = "normal" | "elite" | "boss";
 
 export interface MonsterTemplate {
   id: string;
+  speciesId?: string;
   name: string;
   level: number;
   health: number;

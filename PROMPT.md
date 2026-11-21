@@ -14,6 +14,10 @@ Create a prompt for GitHub Copilot to create a Vampire Fantasy Idle Game using T
 
 ## GitHub Copilot
 
+### Prompt 8
+
+`Expand the Blood Absorption system so absorbed abilities can evolve when the vampire defeats additional powerful monsters of the same species. Add ability levels, upgrade requirements, and visual feedback.`
+
 ### Prompt 3
 
 [`INTIAL_PROMPT.md`](https://github.com/JoshuaPendlebury/Vibe_Code_Test-Bloodbound_Ascension/blob/main/INITIAL_PROMPT.md)
