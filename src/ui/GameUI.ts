@@ -15,6 +15,7 @@ export class GameUI {
   private location: Location;
   private logs: Array<{ message: string; type: string }> = [];
   private respawning = false;
+  private respawnTimer: number | undefined;
   private cooldownTimer: number | undefined;
   private previousPlayerHealth = -1;
   private previousMonsterHealth = -1;
@@ -60,14 +61,24 @@ export class GameUI {
     if (this.respawning) return;
     this.respawning = true;
     this.addLog("Blood stirs... a new enemy emerges.", "normal");
-    window.setTimeout(() => {
+    this.respawnTimer = window.setTimeout(() => {
+      const paused = this.combat.paused;
       const template = this.chooseMonster();
       this.combat = new CombatSystem(this.player, template, this.location.tier, this.combatCallbacks(), this.location.id);
-      this.combat.setPaused(false);
+      this.combat.setPaused(paused);
       this.combat.start();
+      this.respawnTimer = undefined;
       this.respawning = false;
       this.render();
     }, 900);
+  }
+
+  private cancelPendingRespawn(): void {
+    if (this.respawnTimer !== undefined) {
+      window.clearTimeout(this.respawnTimer);
+      this.respawnTimer = undefined;
+    }
+    this.respawning = false;
   }
 
   private template(): string {
@@ -136,13 +147,15 @@ export class GameUI {
       this.spawnMonster();
     });
     document.querySelector("#boss-button")?.addEventListener("click", () => {
-      if (this.respawning) return;
       const defeated = this.player.areaEnemyDefeats[this.location.id] ?? 0;
       if (defeated < 20 || this.combat.monster.template.rank === "boss") return;
       const boss = monsters.find((monster) => monster.id === this.location.bossId);
       if (!boss) return;
+      const paused = this.combat.paused;
+      this.cancelPendingRespawn();
       this.combat.stop();
       this.combat = new CombatSystem(this.player, boss, this.location.tier, this.combatCallbacks(), this.location.id);
+      this.combat.setPaused(paused);
       this.combat.start();
       this.addLog(`You summon ${boss.name}.`, "ability");
       this.render();
@@ -200,7 +213,7 @@ export class GameUI {
     if (bossButton) {
       const defeated = this.player.areaEnemyDefeats[this.location.id] ?? 0;
       const bossActive = this.combat.monster.template.rank === "boss";
-      bossButton.disabled = defeated < 20 || bossActive || this.respawning;
+      bossButton.disabled = defeated < 20 || bossActive;
       bossButton.textContent = bossActive
         ? "Boss Fight Active"
         : defeated >= 20
@@ -383,11 +396,14 @@ export class GameUI {
         card.addEventListener("click", () => {
           const id = (card as HTMLElement).dataset.location;
           if (!this.player.unlockedLocations.includes(id ?? "")) return;
+          const paused = this.combat.paused;
+          this.cancelPendingRespawn();
           this.location = locations.find((item) => item.id === id) ?? this.location;
           this.player.selectedLocation = this.location.id;
           this.combat.stop();
           const template = this.chooseMonster();
           this.combat = new CombatSystem(this.player, template, this.location.tier, this.combatCallbacks(), this.location.id);
+          this.combat.setPaused(paused);
           this.combat.start();
           this.save();
           this.render();
