@@ -36,11 +36,12 @@ export class GameUI {
     const pool = monsters.filter((monster) => this.location.monsterIds.includes(monster.id));
     const candidates = pool.filter((monster) => monster.level <= this.player.level + 3);
     const list = candidates.length ? candidates : pool;
-    const boss = list.filter((monster) => monster.rank === "boss");
-    if (boss.length && this.player.level >= 8 && Math.random() < 0.14) {
-      return boss[Math.floor(Math.random() * boss.length)];
+    const boss = pool.find((monster) => monster.id === this.location.bossId);
+    if (boss && this.player.level >= boss.level - 1 && this.player.level >= this.location.unlockLevel && Math.random() < 0.18) {
+      return boss;
     }
-    return list[Math.floor(Math.random() * list.length)] ?? monsters[0];
+    const regular = list.filter((monster) => monster.rank !== "boss");
+    return regular[Math.floor(Math.random() * regular.length)] ?? monsters[0];
   }
 
   private combatCallbacks() {
@@ -186,12 +187,19 @@ export class GameUI {
     const locationBanner = document.querySelector("#combat-location");
     if (locationBanner) locationBanner.innerHTML = `<span style="color:${this.location.color}">${this.location.icon}</span><div><small>Now Hunting</small><strong>${this.location.name}</strong></div>`;
     const monsterArea = document.querySelector("#monster-area");
+    const bossMechanics: Record<string, string> = {
+      "grave-enrage": "Death Surge · gains 50% attack at 50% health",
+      "thorn-regrowth": "Thorn Regrowth · restores 4% health each turn",
+      "crimson-ward": "Crimson Alternance · alternates 35% damage reduction and empowered attacks",
+    };
+    const mechanic = this.combat.monster.template.bossMechanic ? bossMechanics[this.combat.monster.template.bossMechanic] : "";
     if (monsterArea) monsterArea.innerHTML = `
       <div class="monster-card rank-${this.combat.monster.template.rank}">
         <div class="rank-label">${this.combat.monster.template.rank.toUpperCase()}</div>
         <div class="monster-art ${this.combat.monster.template.rank === "boss" ? "boss-art" : ""}">${this.combat.monster.template.icon}</div>
         <h2>${this.combat.monster.template.name}</h2>
         <p>Level ${this.combat.monster.level} · Power ${this.combat.monster.power}</p>
+        ${mechanic ? `<div class="boss-mechanic">${mechanic}</div>` : ""}
         <div class="monster-health"><div class="bar-label"><span>Health</span><strong>${Math.max(0, this.combat.monster.health)} / ${this.combat.monster.maxHealth}</strong></div><div class="bar monster"><div style="width:${monsterPercent}%"></div></div></div>
       </div>`;
 
@@ -259,7 +267,14 @@ export class GameUI {
       content.innerHTML = `<div class="tab-title"><span>Locations</span></div><div class="location-list">${locations.map((location) => {
         const unlocked = this.player.unlockedLocations.includes(location.id);
         const active = location.id === this.player.selectedLocation;
-        const requirement = location.unlockLevel > this.player.level ? `Requires Level ${location.unlockLevel}` : location.unlockBoss && !this.player.bossDefeated ? "Defeat a castle boss" : "Unlocked";
+        const bossDefeated = this.player.defeatedBosses.includes(location.bossId);
+        const requirement = location.unlockLevel > this.player.level
+          ? `Requires Level ${location.unlockLevel}`
+          : location.unlockBoss && !bossDefeated
+            ? `Defeat ${monsters.find((monster) => monster.id === location.bossId)?.name ?? "the location boss"}`
+            : bossDefeated
+              ? "Boss defeated"
+              : "Unlocked";
         return `<article class="location-card ${active ? "active" : ""} ${unlocked ? "" : "locked"}" data-location="${location.id}" style="--location-color:${location.color}"><div class="location-icon">${location.icon}</div><div><strong>${location.name}</strong><p>${location.description}</p><small>${requirement}</small></div>${unlocked ? `<button>${active ? "Current" : "Enter"}</button>` : `<span class="lock">Locked</span>`}</article>`;
       }).join("")}</div>`;
       content.querySelectorAll("[data-location]").forEach((card) => {
@@ -278,7 +293,7 @@ export class GameUI {
       });
     } else {
       content.innerHTML = `<div class="tab-title"><span>Vampire Statistics</span></div>
-        <div class="statistics"><div><span>Blood Essence Earned</span><strong>${this.player.bloodEssence}</strong></div><div><span>Abilities Absorbed</span><strong>${this.player.acquiredAbilities.filter((id) => abilities.find((a) => a.id === id)?.absorbable).length}</strong></div><div><span>Bosses Defeated</span><strong>${this.player.bossDefeated ? "Yes" : "No"}</strong></div><div><span>Unlocked Areas</span><strong>${this.player.unlockedLocations.length}/${locations.length}</strong></div><div><span>Upgrade Ranks</span><strong>${Object.values(this.player.upgrades).reduce((sum, value) => sum + value, 0)}</strong></div></div>`;
+        <div class="statistics"><div><span>Blood Essence Earned</span><strong>${this.player.bloodEssence}</strong></div><div><span>Abilities Absorbed</span><strong>${this.player.acquiredAbilities.filter((id) => abilities.find((a) => a.id === id)?.absorbable).length}</strong></div><div><span>Bosses Defeated</span><strong>${this.player.defeatedBosses.length}/${locations.length}</strong></div><div><span>Unlocked Areas</span><strong>${this.player.unlockedLocations.length}/${locations.length}</strong></div><div><span>Upgrade Ranks</span><strong>${Object.values(this.player.upgrades).reduce((sum, value) => sum + value, 0)}</strong></div></div>`;
     }
   }
 
