@@ -14,6 +14,7 @@ export interface SavedPlayer {
   abilityLevels: Record<string, number>;
   abilityProgress: Record<string, number>;
   speciesDefeats: Record<string, number>;
+  areaEnemyDefeats: Record<string, number>;
   upgrades: Record<string, number>;
   unlockedLocations: string[];
   selectedLocation: string;
@@ -34,6 +35,7 @@ export class Player {
   abilityLevels: Record<string, number> = {};
   abilityProgress: Record<string, number> = {};
   speciesDefeats: Record<string, number> = {};
+  areaEnemyDefeats: Record<string, number> = {};
   upgrades: Record<string, number> = {
     attack: 0,
     health: 0,
@@ -111,6 +113,7 @@ export class Player {
       abilityLevels: { ...this.abilityLevels },
       abilityProgress: { ...this.abilityProgress },
       speciesDefeats: { ...this.speciesDefeats },
+      areaEnemyDefeats: { ...this.areaEnemyDefeats },
       upgrades: { ...this.upgrades },
       unlockedLocations: [...this.unlockedLocations],
       selectedLocation: this.selectedLocation,
@@ -132,6 +135,7 @@ export class Player {
     this.abilityLevels = data.abilityLevels ?? {};
     this.abilityProgress = data.abilityProgress ?? {};
     this.speciesDefeats = data.speciesDefeats ?? {};
+    this.areaEnemyDefeats = data.areaEnemyDefeats ?? {};
     for (const id of this.acquiredAbilities) {
       if (!this.abilityLevels[id]) this.abilityLevels[id] = 1;
     }
