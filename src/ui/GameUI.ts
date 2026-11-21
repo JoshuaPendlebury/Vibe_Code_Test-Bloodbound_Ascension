@@ -46,7 +46,10 @@ export class GameUI {
       onLog: (message: string, type: "normal" | "damage" | "heal" | "victory" | "ability" = "normal") => this.addLog(message, type),
       onAbsorb: (monsterName: string, abilityName: string, description: string, resultType: "acquired" | "evolved" = "acquired", level = 1) => this.showAbsorption(monsterName, abilityName, description, resultType, level),
       onDeath: (monsterName: string) => this.showDeath(monsterName),
-      onRecover: () => this.hideDeath(),
+      onRecover: () => {
+        this.hideDeath();
+        this.spawnMonster();
+      },
       onSave: () => this.save(),
     };
   }
@@ -113,7 +116,7 @@ export class GameUI {
         <div class="modal-card"><div class="modal-rune">♛</div><h2>Blood Absorption Successful</h2><p id="absorb-monster"></p><h3 id="absorb-name"></h3><p id="absorb-effect"></p><button id="close-modal">Seal Blood</button></div>
       </div>
       <div id="death-modal" class="modal death-modal hidden" role="dialog" aria-modal="true">
-        <div class="modal-card death-card"><div class="death-rune">†</div><h2>You Have Fallen</h2><p id="death-monster"></p><p class="death-penalty">The next kill grants 50% XP.</p><p class="death-recovery">Your body will reform in 1.8 seconds...</p></div>
+        <div class="modal-card death-card"><div class="death-rune">†</div><h2>You Have Fallen</h2><p id="death-monster"></p><p class="death-penalty">The next kill grants 50% XP.</p><p class="death-recovery">The enemy retreats. Your body reforms in 1.8 seconds...</p></div>
       </div>`;
   }
 
