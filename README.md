@@ -110,7 +110,3 @@ GitHub Copilot and Copilot Coding Agent were used to generate and refine the Typ
 - Equipment and additional active abilities
 - Offline idle rewards
 - Achievement and prestige systems
-
-## Vibe Coding Reflection
-
-[Add the required personal reflection on the AI-assisted development process.]
