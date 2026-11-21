@@ -86,3 +86,372 @@ button { font: inherit; cursor: pointer; }
 @media(max-width:1100px){.game-shell{grid-template-columns:220px 1fr 300px}.topbar{padding:0 18px}.top-stats>div{min-width:110px;padding:4px 12px}.monster-art{width:180px;height:180px}}
 @media(max-width:860px){.topbar{height:auto;min-height:68px}.top-stats>div:nth-child(3),.top-stats>div:nth-child(4){display:none}.game-shell{display:flex;flex-direction:column}.player-panel{display:grid;grid-template-columns:180px 1fr;gap:10px}.player-panel .panel-heading{grid-column:1/-1}.portrait{height:150px;margin:0}.player-panel #player-bars{align-self:start}.progression-panel{border-top:1px solid #302d31}.combat-panel{order:-1}.monster-card{min-height:360px}.ability-list,.upgrade-list,.location-list{max-height:none}.tabs{position:sticky;top:0}.battle-log{height:150px}.active-ability{width:25%}}
 @media(max-width:560px){.topbar{padding:8px 12px}.brand small{letter-spacing:3px}.brand strong{font-size:12px}.top-stats>div{min-width:90px;padding:4px}.top-stats>div:nth-child(2){border-right:0}.game-shell{min-height:calc(100vh - 68px)}.player-panel{display:block}.portrait{display:none}.combat-panel{min-height:600px}.location-banner{padding:0 12px}.monster-card{min-height:325px}.monster-art{width:150px;height:150px;font-size:90px}.monster-health{width:85%}.abilities-active{padding:0 8px 10px}.active-ability{width:25%;height:58px}.active-ability>span{display:none}.active-ability strong{font-size:7px}.battle-log{margin:0 8px 8px}.tabs button{font-size:7px}}
+
+/* Gothic presentation and combat feedback */
+:root {
+  --blood: #9f2d40;
+  --blood-bright: #d84d61;
+  --bone: #ede5dc;
+  --muted: #9d9692;
+  --line: rgba(197, 170, 132, 0.16);
+}
+
+body {
+  background:
+    radial-gradient(circle at 78% 16%, rgba(115, 31, 48, 0.16), transparent 22rem),
+    radial-gradient(circle at 20% 80%, rgba(75, 24, 32, 0.12), transparent 28rem),
+    #08080a;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+.skip-link {
+  position: fixed;
+  left: 12px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 14px;
+  background: #eee5d8;
+  color: #161216;
+  text-decoration: none;
+  transition: top .2s ease;
+}
+.skip-link:focus { top: 12px; }
+
+.topbar {
+  background:
+    linear-gradient(90deg, rgba(151, 40, 57, .08), transparent 28%, transparent 72%, rgba(151, 40, 57, .06)),
+    rgba(8, 8, 10, .96);
+  border-bottom-color: rgba(174, 143, 104, .22);
+  backdrop-filter: blur(12px);
+}
+
+.brand-mark,
+.portrait-rune,
+.monster-art,
+.modal-rune,
+.death-rune {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.brand strong,
+.brand small,
+.top-stats strong,
+.location-banner strong,
+.monster-card h2,
+.tab-title,
+.ability-name,
+.upgrade-info strong,
+.location-card strong,
+.statistics strong,
+.modal-card h2,
+.modal-card h3 {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.brand strong { letter-spacing: .16em; }
+.brand small { letter-spacing: .38em; }
+
+.game-shell {
+  background:
+    linear-gradient(90deg, transparent 49.95%, rgba(181, 155, 120, .035) 50%, transparent 50.05%);
+  box-shadow: 0 30px 80px rgba(0,0,0,.45);
+}
+
+.panel,
+.combat-panel {
+  border-left-color: var(--line);
+  border-right-color: var(--line);
+}
+
+.player-panel,
+.progression-panel {
+  background:
+    linear-gradient(180deg, rgba(24, 22, 25, .98), rgba(10, 10, 12, .98));
+}
+
+.portrait {
+  border-color: rgba(182, 139, 111, .24);
+  box-shadow: inset 0 0 55px #08080a, 0 12px 30px rgba(0,0,0,.28);
+}
+.portrait::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(196, 170, 127, .08);
+  clip-path: polygon(50% 0, 54% 8%, 61% 3%, 64% 12%, 72% 8%, 73% 18%, 82% 16%, 81% 26%, 92% 28%, 88% 38%, 100% 43%, 50% 100%, 0 43%, 12% 38%, 8% 28%, 18% 26%, 17% 16%, 28% 18%, 27% 8%, 36% 12%, 39% 3%, 46% 8%);
+}
+
+.combat-panel {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(133, 37, 55, .12), transparent 25rem),
+    linear-gradient(180deg, #171317 0, #0d0d10 72%);
+  overflow: hidden;
+}
+
+.location-banner {
+  background: rgba(7, 7, 9, .42);
+  border-bottom-color: var(--line);
+}
+
+.monster-card {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 50% 58%, rgba(117, 27, 43, .34), transparent 19rem),
+    linear-gradient(rgba(10,10,12,.08), rgba(10,10,12,.68));
+  transition: filter .16s ease;
+}
+.monster-card::after {
+  content: "";
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border: 1px solid rgba(176, 108, 121, .09);
+  border-radius: 50%;
+  box-shadow: 0 0 70px rgba(145, 36, 52, .08), inset 0 0 40px rgba(145, 36, 52, .08);
+  animation: ritual-pulse 4s ease-in-out infinite;
+  z-index: 0;
+}
+.rank-label {
+  z-index: 2;
+  background: rgba(11,11,13,.72);
+  backdrop-filter: blur(6px);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+.monster-art {
+  text-shadow: 0 12px 18px #050506, 0 0 24px rgba(195, 67, 86, .42);
+  animation: monster-breathe 3.2s ease-in-out infinite;
+}
+.monster-card.enemy-hit .monster-art {
+  animation: enemy-hit .38s ease-out;
+}
+.player-panel.player-hit {
+  animation: player-hit-flash .42s ease-out;
+}
+
+.bar {
+  height: 9px;
+  border-color: rgba(188, 160, 128, .16);
+  background: #18171b;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,.5);
+}
+.bar div { transition: width .42s cubic-bezier(.2,.8,.2,1); }
+.bar.health div {
+  background: linear-gradient(90deg, #711728, #bb384d);
+  box-shadow: 0 0 12px rgba(201, 65, 82, .52);
+}
+.bar.monster div {
+  background: linear-gradient(90deg, #77192b, #d44b61);
+  box-shadow: 0 0 13px rgba(213, 70, 91, .5);
+}
+
+.combat-controls { position: relative; z-index: 4; flex-wrap: wrap; }
+.primary-button,
+.icon-button,
+.active-ability,
+.upgrade-card button,
+.location-card button,
+.modal-card button,
+.tabs button,
+.log-heading button {
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.primary-button {
+  border-color: #873445;
+  background: linear-gradient(180deg, #982b3b, #6c1e2d);
+  box-shadow: 0 7px 18px rgba(73, 12, 24, .26);
+}
+.primary-button:hover:not(:disabled) { filter: brightness(1.12); box-shadow: 0 8px 22px rgba(155, 39, 59, .28); }
+.primary-button.paused { background: linear-gradient(180deg, #4b3a28, #2e251b); border-color: #75603f; }
+.icon-button:hover:not(:disabled),
+.active-ability:hover:not(:disabled),
+.upgrade-card button:hover:not(:disabled),
+.location-card button:hover:not(:disabled),
+.modal-card button:hover {
+  border-color: #91646b;
+  color: #f4ece4;
+  transform: translateY(-1px);
+}
+
+.active-ability {
+  border-color: rgba(167, 130, 119, .22);
+  background: linear-gradient(180deg, rgba(33,29,33,.96), rgba(20,19,22,.96));
+  box-shadow: inset 0 1px rgba(255,255,255,.025);
+}
+.active-ability:not(:disabled):hover { border-color: #8f3e4b; box-shadow: 0 7px 18px rgba(0,0,0,.28), inset 0 -2px rgba(167,51,70,.22); }
+.active-ability:disabled { filter: saturate(.45); }
+
+.battle-log {
+  border-color: var(--line);
+  background: rgba(7,7,9,.86);
+  box-shadow: inset 0 8px 18px rgba(0,0,0,.18);
+}
+.log-content {
+  scrollbar-width: thin;
+  scrollbar-color: #4d3439 #111114;
+}
+.log-entry { border-bottom: 1px solid rgba(255,255,255,.018); }
+.log-entry.damage { text-shadow: 0 0 12px rgba(187, 82, 101, .18); }
+.log-entry.ability { text-shadow: 0 0 12px rgba(207, 168, 201, .16); }
+
+.tabs { background: rgba(8,8,10,.42); }
+.tabs button {
+  position: relative;
+  letter-spacing: .08em;
+}
+.tabs button.active {
+  color: #dfc68d;
+  border-bottom: 2px solid #ad8b50;
+  box-shadow: inset 0 -12px 24px rgba(174,132,67,.07);
+}
+
+.ability-card,
+.upgrade-card,
+.location-card {
+  transition: background .18s ease, border-color .18s ease;
+}
+.ability-card:hover,
+.upgrade-card:hover,
+.location-card:not(.locked):hover {
+  background: rgba(255,255,255,.018);
+}
+
+.ability-toast {
+  position: fixed;
+  top: 94px;
+  left: 50%;
+  z-index: 40;
+  max-width: min(520px, calc(100vw - 32px));
+  transform: translate(-50%, -18px);
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid rgba(191, 153, 105, .38);
+  background: rgba(21, 17, 21, .96);
+  color: #eadfcf;
+  padding: 12px 18px;
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  letter-spacing: .04em;
+  box-shadow: 0 14px 35px rgba(0,0,0,.48), inset 0 0 22px rgba(165,48,68,.09);
+  transition: opacity .22s ease, transform .22s ease;
+}
+.ability-toast.visible { opacity: 1; transform: translate(-50%, 0); }
+.ability-toast.victory { border-color: rgba(206, 171, 105, .48); color: #dcc58e; }
+.ability-toast.ability { border-color: rgba(195, 98, 116, .48); color: #efccd3; }
+
+.combat-feedback {
+  position: absolute;
+  inset: 52px 0 260px;
+  z-index: 8;
+  pointer-events: none;
+  overflow: hidden;
+}
+.combat-number {
+  position: absolute;
+  z-index: 9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  font-weight: 700;
+  text-shadow: 0 3px 8px #080809;
+  animation: combat-number .65s cubic-bezier(.16,.8,.24,1) forwards;
+}
+.combat-number.monster { left: 50%; top: 45%; }
+.combat-number.player { left: 12%; top: 52%; }
+.combat-number.damage { color: #e36a7c; }
+.combat-number.heal { color: #88c397; }
+
+.modal {
+  backdrop-filter: blur(8px);
+  animation: modal-in .18s ease-out;
+}
+.modal-card {
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid #d6bd87;
+  outline-offset: 3px;
+}
+button:disabled { cursor: not-allowed; }
+
+@keyframes ritual-pulse {
+  50% { transform: scale(1.06); opacity: .48; }
+}
+@keyframes monster-breathe {
+  50% { transform: translateY(-7px) scale(1.018); }
+}
+@keyframes enemy-hit {
+  0% { transform: translateX(0) scale(1); filter: brightness(1); }
+  25% { transform: translateX(-10px) scale(.96); filter: brightness(1.8) sepia(.25); }
+  55% { transform: translateX(7px) scale(1.02); filter: brightness(.75); }
+  100% { transform: translateX(0) scale(1); filter: brightness(1); }
+}
+@keyframes player-hit-flash {
+  25% { box-shadow: inset 16px 0 28px rgba(194,51,72,.22); }
+  100% { box-shadow: inset 0 0 0 transparent; }
+}
+@keyframes combat-number {
+  0% { opacity: 0; transform: translate(-50%, 12px) scale(.75); }
+  20% { opacity: 1; transform: translate(-50%, -2px) scale(1.12); }
+  100% { opacity: 0; transform: translate(-50%, -58px) scale(.9); }
+}
+@keyframes modal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 860px) {
+  .game-shell { background: none; }
+  .combat-panel { order: -1; }
+  .combat-feedback { inset: 52px 0 300px; }
+  .combat-number.player { left: 10%; }
+  .tabs { top: 0; z-index: 12; }
+  .progression-panel { min-height: 380px; }
+}
+
+@media (max-width: 560px) {
+  .topbar { position: sticky; top: 0; z-index: 20; }
+  .top-stats { margin-left: auto; }
+  .top-stats > div { min-width: 82px; }
+  .combat-panel { min-height: 570px; }
+  .monster-card { min-height: 315px; }
+  .monster-card::after { width: 230px; height: 230px; }
+  .monster-art { width: 140px; height: 140px; }
+  .combat-controls { margin: 8px 8px 12px; }
+  .combat-controls .icon-button { min-width: 0; }
+  .combat-controls .boss-button,
+  #reset-button { display: none; }
+  .abilities-active { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .active-ability { width: 100%; height: 54px; }
+  .battle-log { height: 128px; }
+  .log-content { height: 100px; }
+  .ability-toast { top: 78px; }
+  .combat-feedback { inset: 52px 0 250px; }
+  .combat-number.player { left: 12%; top: 64%; }
+  .tabs button { min-height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
