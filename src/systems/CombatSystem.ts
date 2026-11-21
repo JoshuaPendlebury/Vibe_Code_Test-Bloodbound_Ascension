@@ -238,10 +238,10 @@ export class CombatSystem {
   private death(): void {
     if (this.recovering || this.resolved) return;
     this.recovering = true;
-    this.monster.health = this.monster.maxHealth;
     this.player.deathXpPenaltyKills = 1;
-    this.callbacks.onLog("Your vampire falls. Blood restores within seconds.", "damage");
+    this.callbacks.onLog("Your vampire falls. The current enemy retreats.", "damage");
     this.callbacks.onDeath(this.monster.template.name);
+    this.skipEnemy();
     this.callbacks.onUpdate();
     window.setTimeout(() => {
       this.playerHealth = this.player.maxHealthWithUpgrades;
