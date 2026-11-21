@@ -1,3 +1,5 @@
+import { abilities } from "../data/abilities";
+
 export interface SavedPlayer {
   level: number;
   experience: number;
@@ -16,6 +18,7 @@ export interface SavedPlayer {
   unlockedLocations: string[];
   selectedLocation: string;
   bossDefeated: boolean;
+  defeatedBosses: string[];
 }
 
 export class Player {
@@ -41,13 +44,16 @@ export class Player {
   unlockedLocations = ["graveyard"];
   selectedLocation = "graveyard";
   bossDefeated = false;
+  defeatedBosses: string[] = [];
   deathXpPenaltyKills = 0;
 
   get attack() {
     return this.baseAttack + this.upgrades.attack * 4 + this.level * 2;
   }
   get maxHealthWithUpgrades() {
-    return this.maxHealth + this.upgrades.health * 20 + (this.level - 1) * 8;
+    const vigor = this.getAbilityLevel("ossuary-vigor");
+    const vigorEffect = abilities.find((ability) => ability.id === "ossuary-vigor")?.effect.maxHealth ?? 0;
+    return this.maxHealth + this.upgrades.health * 20 + (this.level - 1) * 8 + vigor * vigorEffect;
   }
   get defense() {
     return this.baseDefense + this.upgrades.defense * 3 + this.level;
@@ -109,6 +115,7 @@ export class Player {
       unlockedLocations: [...this.unlockedLocations],
       selectedLocation: this.selectedLocation,
       bossDefeated: this.bossDefeated,
+      defeatedBosses: [...this.defeatedBosses],
     };
   }
 
@@ -134,6 +141,7 @@ export class Player {
       ? data.selectedLocation!
       : "graveyard";
     this.bossDefeated = data.bossDefeated ?? false;
+    this.defeatedBosses = Array.isArray(data.defeatedBosses) ? data.defeatedBosses : [];
     this.health = Math.min(data.health ?? this.maxHealthWithUpgrades, this.maxHealthWithUpgrades);
   }
 }

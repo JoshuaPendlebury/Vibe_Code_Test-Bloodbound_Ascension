@@ -29,6 +29,8 @@ export class CombatSystem {
   private playerPowerAtStart: number;
   private resolved = false;
   private recovering = false;
+  private bossCycle = 0;
+  private graveEnrageLogged = false;
 
   constructor(player: Player, template: MonsterTemplate, tier: number, callbacks: CombatCallbacks) {
     this.player = player;
@@ -73,6 +75,8 @@ export class CombatSystem {
       attackSpeed: base.attackSpeed ? base.attackSpeed * level : undefined,
       attack: base.attack ? base.attack * level : undefined,
       essenceBonus: base.essenceBonus ? base.essenceBonus * level : undefined,
+      maxHealth: base.maxHealth ? base.maxHealth * level : undefined,
+      healthRegen: base.healthRegen ? base.healthRegen * level : undefined,
     };
   }
 
@@ -91,6 +95,12 @@ export class CombatSystem {
 
   private runCombatCycle(): void {
     if (this.paused || this.resolved || this.recovering || this.monster.health <= 0 || this.playerHealth <= 0) return;
+    if (this.monster.template.rank === "boss") this.bossCycle++;
+    if (this.hasPassive("wildheart-regeneration")) {
+      const regenPercent = this.scaledPassiveEffect("wildheart-regeneration").healthRegen ?? 3;
+      const regen = Math.max(1, Math.round(this.player.maxHealthWithUpgrades * regenPercent / 100));
+      this.playerHealth = Math.min(this.player.maxHealthWithUpgrades, this.playerHealth + regen);
+    }
     this.playerAttack(false);
     if (this.monster.health > 0) this.monsterAttack();
   }
@@ -104,12 +114,24 @@ export class CombatSystem {
       const bonus = this.scaledPassiveEffect("demonic-strength").attack ?? 25;
       damage = Math.round(damage * (1 + bonus / 100));
     }
+    if (this.hasPassive("crimson-dominion")) {
+      const bonus = this.scaledPassiveEffect("crimson-dominion").attack ?? 20;
+      damage = Math.round(damage * (1 + bonus / 100));
+    }
+    if (this.monster.template.bossMechanic === "crimson-ward" && this.bossCycle % 2 === 1) {
+      damage = Math.round(damage * 0.65);
+    }
     if (critical) damage = Math.round(damage * 1.65);
     if (active) damage = Math.round(damage);
 
     this.monster.health -= damage;
     if (this.hasPassive("life-drain")) {
       const healPercent = this.scaledPassiveEffect("life-drain").healPercent ?? 8;
+      const heal = Math.max(1, Math.round(damage * healPercent / 100));
+      this.playerHealth = Math.min(this.player.maxHealthWithUpgrades, this.playerHealth + heal);
+    }
+    if (this.hasPassive("crimson-dominion")) {
+      const healPercent = this.scaledPassiveEffect("crimson-dominion").healPercent ?? 10;
       const heal = Math.max(1, Math.round(damage * healPercent / 100));
       this.playerHealth = Math.min(this.player.maxHealthWithUpgrades, this.playerHealth + heal);
     }
@@ -120,13 +142,32 @@ export class CombatSystem {
 
   private monsterAttack(): void {
     if (this.resolved || this.recovering || this.monster.health <= 0 || this.playerHealth <= 0) return;
+    if (this.monster.template.bossMechanic === "thorn-regrowth") {
+      const healed = Math.max(1, Math.round(this.monster.maxHealth * 0.04));
+      const previousHealth = this.monster.health;
+      this.monster.health = Math.min(this.monster.maxHealth, this.monster.health + healed);
+      if (this.monster.health > previousHealth) {
+        this.callbacks.onLog(`${this.monster.template.name} uses Thorn Regrowth and restores ${this.monster.health - previousHealth} health.`, "heal");
+      }
+    }
     const dodgeChance = this.hasPassive("shadow-step") ? this.scaledPassiveEffect("shadow-step").dodgeChance ?? 0 : 0;
     if (Math.random() * 100 < dodgeChance) {
       this.callbacks.onLog(`Shadow Step causes you to evade ${this.monster.template.name}'s attack.`, "heal");
       return;
     }
     const boneArmor = this.hasPassive("bone-armor") ? this.scaledPassiveEffect("bone-armor").defense ?? 20 : 0;
-    let damage = Math.max(1, Math.round(this.monster.attack - (this.player.defense + boneArmor) * 0.58));
+    const ossuaryDefense = this.hasPassive("ossuary-vigor") ? this.scaledPassiveEffect("ossuary-vigor").defense ?? 12 : 0;
+    let damage = Math.max(1, Math.round(this.monster.attack - (this.player.defense + boneArmor + ossuaryDefense) * 0.58));
+    if (this.monster.template.bossMechanic === "grave-enrage" && this.monster.health / this.monster.maxHealth <= 0.5) {
+      damage = Math.round(damage * 1.5);
+      if (!this.graveEnrageLogged) {
+        this.callbacks.onLog(`${this.monster.template.name} enters Death Surge: attacks deal 50% more damage!`, "ability");
+        this.graveEnrageLogged = true;
+      }
+    }
+    if (this.monster.template.bossMechanic === "crimson-ward" && this.bossCycle % 2 === 0) {
+      damage = Math.round(damage * 1.35);
+    }
     if (Date.now() < this.shieldUntil) damage = Math.round(damage * 0.4);
     this.playerHealth = Math.max(0, this.playerHealth - damage);
     this.callbacks.onLog(`${this.monster.template.name} retaliates for ${damage} damage.`, "damage");
@@ -155,7 +196,12 @@ export class CombatSystem {
     }
     this.player.bloodEssence += essence;
     const levels = this.player.gainExperience(experience);
-    if (this.monster.template.rank === "boss") this.player.bossDefeated = true;
+    if (this.monster.template.rank === "boss") {
+      this.player.bossDefeated = true;
+      if (!this.player.defeatedBosses.includes(this.monster.template.id)) {
+        this.player.defeatedBosses.push(this.monster.template.id);
+      }
+    }
     this.progression.unlockLocations(this.player);
     const xpPenalties: string[] = [];
     if (hadLowLevelPenalty) xpPenalties.push(`Low-level XP reduction: ${Math.round(lowLevelXpMultiplier * 100)}%`);

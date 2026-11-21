@@ -8,4 +8,7 @@ export const monsters: MonsterTemplate[] = [
   { id: "blood-wraith", speciesId: "blood-wraith", name: "Blood Wraith", level: 7, health: 180, attack: 26, defense: 12, speed: 19, rank: "elite", experience: 72, bloodEssence: 48, abilityId: "life-drain", icon: "♆" },
   { id: "ancient-vampire", speciesId: "ancient-vampire", name: "Ancient Vampire", level: 10, health: 300, attack: 38, defense: 24, speed: 22, rank: "boss", experience: 120, bloodEssence: 90, abilityId: "blood-frenzy", icon: "🦇" },
   { id: "abyssal-demon", speciesId: "abyssal-demon", name: "Abyssal Demon", level: 13, health: 430, attack: 52, defense: 32, speed: 18, rank: "boss", experience: 170, bloodEssence: 130, abilityId: "demonic-strength", icon: "👹" },
+  { id: "ossuary-king", speciesId: "ossuary-king", name: "The Ossuary King", level: 4, health: 150, attack: 17, defense: 12, speed: 10, rank: "boss", experience: 78, bloodEssence: 55, abilityId: "ossuary-vigor", icon: "♰", bossMechanic: "grave-enrage" },
+  { id: "thornheart-matriarch", speciesId: "thornheart-matriarch", name: "Thornheart Matriarch", level: 7, health: 260, attack: 27, defense: 19, speed: 17, rank: "boss", experience: 105, bloodEssence: 78, abilityId: "wildheart-regeneration", icon: "❧", bossMechanic: "thorn-regrowth" },
+  { id: "crimson-sovereign", speciesId: "crimson-sovereign", name: "The Crimson Sovereign", level: 12, health: 390, attack: 43, defense: 30, speed: 22, rank: "boss", experience: 180, bloodEssence: 145, abilityId: "crimson-dominion", icon: "♛", bossMechanic: "crimson-ward" },
 ];

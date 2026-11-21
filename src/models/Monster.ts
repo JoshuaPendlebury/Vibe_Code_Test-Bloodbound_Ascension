@@ -1,4 +1,5 @@
 export type MonsterRank = "normal" | "elite" | "boss";
+export type BossMechanic = "grave-enrage" | "thorn-regrowth" | "crimson-ward";
 
 export interface MonsterTemplate {
   id: string;
@@ -14,6 +15,7 @@ export interface MonsterTemplate {
   bloodEssence: number;
   abilityId: string;
   icon: string;
+  bossMechanic?: BossMechanic;
 }
 
 export class Monster {
