@@ -244,6 +244,7 @@ export class CombatSystem {
     this.skipEnemy();
     this.callbacks.onUpdate();
     window.setTimeout(() => {
+      this.resolved = false;
       this.playerHealth = this.player.maxHealthWithUpgrades;
       this.player.health = this.playerHealth;
       this.recovering = false;
@@ -251,6 +252,7 @@ export class CombatSystem {
       this.callbacks.onRecover();
       this.callbacks.onUpdate();
       this.callbacks.onSave();
+      this.start();
     }, 1800);
   }
 
