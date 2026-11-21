@@ -114,6 +114,10 @@ export class CombatSystem {
     if (this.player.acquiredAbilities.includes("essence-conduit")) essenceMultiplier += 0.2;
     const essence = Math.max(1, Math.round(this.monster.bloodEssence * (stronger ? 1.25 : 1) * essenceMultiplier));
     let experience = Math.round(this.monster.experience * (stronger ? 1.25 : 1));
+    const levelDifference = Math.max(0, this.player.level - this.monster.level);
+    const lowLevelXpMultiplier = levelDifference > 0 ? Math.max(0.1, 1 - levelDifference * 0.15) : 1;
+    experience = Math.max(1, Math.round(experience * lowLevelXpMultiplier));
+    const hadLowLevelPenalty = levelDifference > 0;
     const hadDeathPenalty = this.player.deathXpPenaltyKills > 0;
     if (hadDeathPenalty) {
       experience = Math.max(1, Math.round(experience * 0.5));
@@ -123,7 +127,11 @@ export class CombatSystem {
     const levels = this.player.gainExperience(experience);
     if (this.monster.template.rank === "boss") this.player.bossDefeated = true;
     this.progression.unlockLocations(this.player);
-    this.callbacks.onLog(`Victory! +${experience} XP and +${essence} Blood Essence.${hadDeathPenalty ? " Death XP penalty: 50%." : ""}`, "victory");
+    const xpPenalties: string[] = [];
+    if (hadLowLevelPenalty) xpPenalties.push(`Low-level XP reduction: ${Math.round(lowLevelXpMultiplier * 100)}%`);
+    if (hadDeathPenalty) xpPenalties.push("Death XP penalty: 50%");
+    const penaltyText = xpPenalties.length ? ` ${xpPenalties.join("; ")}.` : "";
+    this.callbacks.onLog(`Victory! +${experience} XP and +${essence} Blood Essence.${penaltyText}`, "victory");
     for (const level of levels) this.callbacks.onLog(`Ascension: Level ${level} reached!`, "ability");
 
     const result = this.absorption.absorb(this.player, this.monster, this.playerPowerAtStart);
