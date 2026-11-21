@@ -16,6 +16,8 @@ export class GameUI {
   private logs: Array<{ message: string; type: string }> = [];
   private respawning = false;
   private cooldownTimer: number | undefined;
+  private previousPlayerHealth = -1;
+  private previousMonsterHealth = -1;
 
   constructor(private root: HTMLElement) {
     SaveSystem.load(this.player);
@@ -70,9 +72,10 @@ export class GameUI {
 
   private template(): string {
     return `
+      <a class="skip-link" href="#combat-area">Skip to combat</a>
       <header class="topbar">
         <div class="brand"><span class="brand-mark">V</span><div><small>BLOODBOUND</small><strong>ASCENSION</strong></div></div>
-        <div class="top-stats">
+        <div class="top-stats" aria-label="Vampire overview">
           <div><span>LEVEL</span><strong id="top-level"></strong></div>
           <div><span>BLOOD ESSENCE</span><strong class="essence" id="top-essence"></strong></div>
           <div><span>LOCATION</span><strong id="top-location"></strong></div>
@@ -80,34 +83,34 @@ export class GameUI {
         </div>
       </header>
       <main class="game-shell">
-        <aside class="panel player-panel">
+        <aside class="panel player-panel" aria-label="Vampire status">
           <div class="panel-heading"><span>THE VAMPIRE</span></div>
           <div class="portrait"><div class="portrait-rune">♛</div><div class="portrait-name">NOCTURNE</div></div>
           <div id="player-bars"></div>
           <div id="player-stats"></div>
         </aside>
-        <section class="combat-panel">
+        <section class="combat-panel" id="combat-area" aria-label="Combat arena">
           <div id="combat-location" class="location-banner"></div>
           <div id="monster-area"></div>
           <div class="combat-controls">
-            <button id="pause-button" class="primary-button">Ⅱ Pause Combat</button>
+            <button id="pause-button" class="primary-button" aria-pressed="false"><span aria-hidden="true">Ⅱ</span> Pause Combat</button>
             <button id="skip-button" class="icon-button">Skip Enemy</button>
             <button id="boss-button" class="icon-button boss-button" disabled>Fight Area Boss · 0/20</button>
             <button id="save-button" class="icon-button">Save</button>
             <button id="reset-button" class="icon-button danger">Reset</button>
           </div>
           <div class="abilities-active" id="active-abilities"></div>
-          <div class="battle-log">
+          <div class="battle-log" aria-label="Combat log">
             <div class="log-heading"><span>Night Chronicle</span><button id="clear-log">Clear</button></div>
-            <div id="combat-log" class="log-content"></div>
+            <div id="combat-log" class="log-content" role="log" aria-live="polite" aria-relevant="additions"></div>
           </div>
         </section>
         <aside class="panel progression-panel">
-          <div class="tabs">
-            <button data-tab="abilities">Abilities</button>
-            <button data-tab="upgrades">Upgrades</button>
-            <button data-tab="locations">Locations</button>
-            <button data-tab="statistics">Statistics</button>
+          <div class="tabs" role="tablist" aria-label="Progression">
+            <button data-tab="abilities" role="tab" aria-selected="true">Abilities</button>
+            <button data-tab="upgrades" role="tab" aria-selected="false">Upgrades</button>
+            <button data-tab="locations" role="tab" aria-selected="false">Locations</button>
+            <button data-tab="statistics" role="tab" aria-selected="false">Statistics</button>
           </div>
           <div id="tab-content"></div>
         </aside>
@@ -117,7 +120,9 @@ export class GameUI {
       </div>
       <div id="death-modal" class="modal death-modal hidden" role="dialog" aria-modal="true">
         <div class="modal-card death-card"><div class="death-rune">†</div><h2>You Have Fallen</h2><p id="death-monster"></p><p class="death-penalty">The next kill grants 50% XP.</p><p class="death-recovery">The enemy retreats. Your body reforms in 1.8 seconds...</p></div>
-      </div>`;
+      </div>
+      <div id="ability-toast" class="ability-toast" aria-live="assertive" aria-atomic="true"></div>
+      <div id="combat-feedback" class="combat-feedback" aria-hidden="true"></div>`;
   }
 
   private bind(): void {
@@ -162,6 +167,11 @@ export class GameUI {
     document.querySelector("#close-modal")?.addEventListener("click", () => {
       document.querySelector("#absorption-modal")?.classList.add("hidden");
     });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      document.querySelector("#absorption-modal")?.classList.add("hidden");
+      document.querySelector("#death-modal")?.classList.add("hidden");
+    });
     document.querySelectorAll("[data-tab]").forEach((button) => {
       button.addEventListener("click", () => {
         this.tab = (button as HTMLElement).dataset.tab ?? "abilities";
@@ -178,7 +188,14 @@ export class GameUI {
     setText("top-level", `${this.player.level}`);
     setText("top-essence", `${this.player.bloodEssence}`);
     setText("top-location", this.location.name);
-    document.querySelector("#pause-button")!.textContent = this.combat.paused ? "▶ Resume Combat" : "Ⅱ Pause Combat";
+    const pauseButton = document.querySelector<HTMLButtonElement>("#pause-button");
+    if (pauseButton) {
+      pauseButton.innerHTML = this.combat.paused
+        ? '<span aria-hidden="true">▶</span> Resume Combat'
+        : '<span aria-hidden="true">Ⅱ</span> Pause Combat';
+      pauseButton.setAttribute("aria-pressed", String(this.combat.paused));
+      pauseButton.classList.toggle("paused", this.combat.paused);
+    }
     const bossButton = document.querySelector<HTMLButtonElement>("#boss-button");
     if (bossButton) {
       const defeated = this.player.areaEnemyDefeats[this.location.id] ?? 0;
@@ -197,9 +214,9 @@ export class GameUI {
     const playerBars = document.querySelector("#player-bars");
     if (playerBars) playerBars.innerHTML = `
       <div class="bar-label"><span>Vitality</span><strong>${this.combat.playerHealth}/${this.player.maxHealthWithUpgrades}</strong></div>
-      <div class="bar health"><div style="width:${playerPercent}%"></div></div>
+      <div class="bar health" role="progressbar" aria-label="Vitality" aria-valuemin="0" aria-valuemax="${this.player.maxHealthWithUpgrades}" aria-valuenow="${this.combat.playerHealth}"><div style="width:${playerPercent}%"></div></div>
       <div class="bar-label"><span>Experience</span><strong>${this.player.experience}/${this.player.expNeeded}</strong></div>
-      <div class="bar experience"><div style="width:${expPercent}%"></div></div>`;
+      <div class="bar experience" role="progressbar" aria-label="Experience" aria-valuemin="0" aria-valuemax="${this.player.expNeeded}" aria-valuenow="${this.player.experience}"><div style="width:${expPercent}%"></div></div>`;
 
     setText("player-stats", "");
     const playerStats = document.querySelector("#player-stats");
@@ -229,9 +246,10 @@ export class GameUI {
         <h2>${this.combat.monster.template.name}</h2>
         <p>Level ${this.combat.monster.level} · Power ${this.combat.monster.power}</p>
         ${mechanic ? `<div class="boss-mechanic">${mechanic}</div>` : ""}
-        <div class="monster-health"><div class="bar-label"><span>Health</span><strong>${Math.max(0, this.combat.monster.health)} / ${this.combat.monster.maxHealth}</strong></div><div class="bar monster"><div style="width:${monsterPercent}%"></div></div></div>
+        <div class="monster-health"><div class="bar-label"><span>Health</span><strong>${Math.max(0, this.combat.monster.health)} / ${this.combat.monster.maxHealth}</strong></div><div class="bar monster" role="progressbar" aria-label="${this.combat.monster.template.name} health" aria-valuemin="0" aria-valuemax="${this.combat.monster.maxHealth}" aria-valuenow="${Math.max(0, this.combat.monster.health)}"><div style="width:${monsterPercent}%"></div></div></div>
       </div>`;
 
+    this.updateCombatFeedback();
     this.renderActiveAbilities();
     this.renderTab();
     this.renderLogs();
@@ -248,7 +266,7 @@ export class GameUI {
     const activeIds = active.map((ability) => ability.id);
     if (renderedIds.length !== activeIds.length || renderedIds.some((id, index) => id !== activeIds[index])) {
       container.innerHTML = active.map((ability) =>
-        `<button class="active-ability" data-ability="${ability.id}"><span>${ability.icon}</span><div><strong>${ability.name}</strong><small>${ability.description}</small></div></button>`
+        `<button class="active-ability" data-ability="${ability.id}" aria-label="Use ${ability.name}: ${ability.description}"><span aria-hidden="true">${ability.icon}</span><div><strong>${ability.name}</strong><small>${ability.description}</small></div></button>`
       ).join("");
     }
     for (const ability of active) {
@@ -258,6 +276,9 @@ export class GameUI {
       button.disabled = remaining > 0;
       const detail = button.querySelector("small");
       if (detail) detail.textContent = remaining ? `${remaining}s cooldown` : ability.description;
+      button.setAttribute("aria-label", remaining
+        ? `${ability.name}, ${remaining} seconds cooldown`
+        : `Use ${ability.name}: ${ability.description}`);
     }
   }
 
@@ -265,9 +286,53 @@ export class GameUI {
     this.renderActiveAbilities();
   }
 
+  private updateCombatFeedback(): void {
+    if (this.previousPlayerHealth < 0) {
+      this.previousPlayerHealth = this.combat.playerHealth;
+      this.previousMonsterHealth = this.combat.monster.health;
+      return;
+    }
+
+    const playerDelta = this.combat.playerHealth - this.previousPlayerHealth;
+    const monsterDelta = this.combat.monster.health - this.previousMonsterHealth;
+
+    if (monsterDelta < 0) this.animateCombatNumber(monsterDelta, "monster", "damage");
+    if (monsterDelta > 0) this.animateCombatNumber(monsterDelta, "monster", "heal");
+    if (playerDelta < 0) this.animateCombatNumber(playerDelta, "player", "damage");
+    if (playerDelta > 0) this.animateCombatNumber(playerDelta, "player", "heal");
+
+    this.previousPlayerHealth = this.combat.playerHealth;
+    this.previousMonsterHealth = this.combat.monster.health;
+  }
+
+  private animateCombatNumber(delta: number, target: "player" | "monster", kind: "damage" | "heal"): void {
+    const feedback = document.querySelector("#combat-feedback");
+    if (!feedback) return;
+
+    const number = document.createElement("span");
+    number.className = `combat-number ${target} ${kind}`;
+    number.textContent = `${delta > 0 ? "+" : ""}${delta}`;
+    feedback.appendChild(number);
+
+    const card = target === "monster"
+      ? document.querySelector(".monster-card")
+      : document.querySelector(".player-panel");
+    card?.classList.remove(target === "monster" ? "enemy-hit" : "player-hit");
+    void card?.getBoundingClientRect();
+    card?.classList.add(target === "monster" ? "enemy-hit" : "player-hit");
+    window.setTimeout(() => {
+      card?.classList.remove(target === "monster" ? "enemy-hit" : "player-hit");
+      number.remove();
+    }, 650);
+  }
+
   private renderTab(): void {
     document.querySelectorAll("[data-tab]").forEach((button) => {
-      button.classList.toggle("active", (button as HTMLElement).dataset.tab === this.tab);
+      const tabButton = button as HTMLElement;
+      const isActive = tabButton.dataset.tab === this.tab;
+      tabButton.classList.toggle("active", isActive);
+      tabButton.setAttribute("aria-selected", String(isActive));
+      tabButton.tabIndex = isActive ? 0 : -1;
     });
     const content = document.querySelector("#tab-content");
     if (!content) return;
@@ -376,6 +441,15 @@ export class GameUI {
   private addLog(message: string, type: "normal" | "damage" | "heal" | "victory" | "ability" = "normal"): void {
     this.logs.push({ message, type });
     this.renderLogs();
+    if (type === "victory" || type === "ability") this.showCombatToast(message, type);
+  }
+
+  private showCombatToast(message: string, type: "victory" | "ability"): void {
+    const toast = document.querySelector("#ability-toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = `ability-toast ${type} visible`;
+    window.setTimeout(() => toast.classList.remove("visible"), 2600);
   }
 
   private showAbsorption(monsterName: string, abilityName: string, description: string, resultType: "acquired" | "evolved" = "acquired", level = 1): void {
@@ -388,6 +462,7 @@ export class GameUI {
     document.querySelector("#absorb-effect")!.textContent = `Effect: ${description}${level > 1 ? ` · Evolution bonuses active at Level ${level}` : ""}`;
     modal.querySelector(".modal-card")?.classList.toggle("evolution-card", resultType === "evolved");
     modal.classList.remove("hidden");
+    modal.setAttribute("aria-label", resultType === "evolved" ? "Ability evolved" : "Blood absorption successful");
   }
 
   private showDeath(monsterName: string): void {
