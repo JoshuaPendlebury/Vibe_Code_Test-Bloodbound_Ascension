@@ -77,3 +77,11 @@ Pause combat button and Fight Area Boss button fails when enemies are oneshot
 ### Prompt 17
 
 Inspect the existing tests and identify an important behavior or edge case that lacks coverage. Add focused tests using the repository's existing test framework and run the relevant tests if available.
+
+### Prompt 18
+
+Make sure the README.md file is up to date
+
+### Prompt 19
+
+Add screenshots from the screenshot folder to the README.md
