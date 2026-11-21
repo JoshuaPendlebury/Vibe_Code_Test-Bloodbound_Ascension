@@ -29,9 +29,8 @@ export class ProgressionSystem {
 
   unlockLocations(player: Player): void {
     for (const location of locations) {
-      const levelMet = player.level >= location.unlockLevel;
-      const bossMet = !location.unlockBoss || player.bossDefeated;
-      if (levelMet && bossMet && !player.unlockedLocations.includes(location.id)) {
+      const bossMet = !location.previousBossId || player.defeatedBosses.includes(location.previousBossId);
+      if (bossMet && !player.unlockedLocations.includes(location.id)) {
         player.unlockedLocations.push(location.id);
       }
     }

@@ -1,4 +1,5 @@
 import { abilities } from "../data/abilities";
+import { locations } from "../data/locations";
 
 export interface SavedPlayer {
   level: number;
@@ -140,12 +141,15 @@ export class Player {
       if (!this.abilityLevels[id]) this.abilityLevels[id] = 1;
     }
     this.upgrades = { attack: 0, health: 0, defense: 0, attackSpeed: 0, absorption: 0, ...data.upgrades };
-    this.unlockedLocations = Array.isArray(data.unlockedLocations) ? data.unlockedLocations : ["graveyard"];
+    const restoredBosses = Array.isArray(data.defeatedBosses) ? data.defeatedBosses : [];
+    this.defeatedBosses = restoredBosses;
+    this.unlockedLocations = locations
+      .filter((location) => !location.previousBossId || this.defeatedBosses.includes(location.previousBossId))
+      .map((location) => location.id);
     this.selectedLocation = this.unlockedLocations.includes(data.selectedLocation ?? "")
       ? data.selectedLocation!
       : "graveyard";
     this.bossDefeated = data.bossDefeated ?? false;
-    this.defeatedBosses = Array.isArray(data.defeatedBosses) ? data.defeatedBosses : [];
     this.health = Math.min(data.health ?? this.maxHealthWithUpgrades, this.maxHealthWithUpgrades);
   }
 }

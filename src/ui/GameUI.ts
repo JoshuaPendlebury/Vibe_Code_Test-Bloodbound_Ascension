@@ -296,13 +296,19 @@ export class GameUI {
         const bossDefeated = this.player.defeatedBosses.includes(location.bossId);
         const areaDefeats = this.player.areaEnemyDefeats[location.id] ?? 0;
         const bossProgress = `Area defeats: ${Math.min(areaDefeats, 20)}/20`;
-        const requirement = location.unlockLevel > this.player.level
-          ? `Requires Level ${location.unlockLevel}`
-          : location.unlockBoss && !bossDefeated
-            ? `Defeat ${monsters.find((monster) => monster.id === location.bossId)?.name ?? "the location boss"}`
-            : bossDefeated
-              ? "Boss defeated"
-              : "Unlocked";
+        const previousBoss = location.previousBossId
+          ? monsters.find((monster) => monster.id === location.previousBossId)
+          : undefined;
+        const previousBossDefeated = previousBoss
+          ? this.player.defeatedBosses.includes(previousBoss.id)
+          : true;
+        const requirement = !unlocked
+          ? `Defeat ${previousBoss?.name ?? "the previous area boss"}`
+          : bossDefeated
+            ? "Boss defeated"
+            : previousBossDefeated
+              ? "Unlocked"
+              : `Requires ${previousBoss?.name ?? "the previous area boss"}`;
         return `<article class="location-card ${active ? "active" : ""} ${unlocked ? "" : "locked"}" data-location="${location.id}" style="--location-color:${location.color}"><div class="location-icon">${location.icon}</div><div><strong>${location.name}</strong><p>${location.description}</p><small>${requirement}</small><small>${bossProgress}</small></div>${unlocked ? `<button>${active ? "Current" : "Enter"}</button>` : `<span class="lock">Locked</span>`}</article>`;
       }).join("")}</div>`;
       content.querySelectorAll("[data-location]").forEach((card) => {
